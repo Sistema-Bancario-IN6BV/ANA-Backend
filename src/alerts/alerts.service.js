@@ -1,199 +1,155 @@
 'use strict';
 
-/**
- * Servicio de alertas
- * Crea y gestiona alertas basadas en datos de salud
- */
+import Alert from './alerts.model.js';
+import CaregiverLink from '../caregivers/caregivers.model.js';
+import { sendAlertEmail } from '../../helpers/email-service.js';
 
-/**
- * Crear alerta
- */
-export const createAlert = async (alertData) => {
+export const generateEmotionAlert = async (elderlyId, emotion, confidence, analysisData) => {
     try {
-        const newAlert = {
-            id: `alert_${Date.now()}`,
-            ...alertData,
-            isViewed: false,
-            isResolved: false,
-            createdAt: new Date()
-        };
+        let severity;
+        let message;
 
-        // await newAlert.save();
-
-        return newAlert;
-    } catch (error) {
-        throw new Error(`Error al crear alerta: ${error.message}`);
-    }
-};
-
-/**
- * Generar alertas basadas en niveles de glucosa
- */
-export const generateGlucoseAlert = async (patientId, glucoseLevel, glucoseData) => {
-    let alert = null;
-
-    if (glucoseLevel > 180) {
-        alert = await createAlert({
-        patientId,
-        alertType: 'high_glucose',
-        severity: glucoseLevel > 250 ? 'critical' : 'high',
-        title: `Nivel de glucosa elevado: ${glucoseLevel} mg/dL`,
-        message: glucoseLevel > 250 
-            ? 'CRÍTICO: Nivel de glucosa muy elevado. Contacte médico inmediatamente.'
-            : 'Nivel de glucosa elevado. Monitoree regularmente.',
-        healthData: glucoseData
-        });
-    } else if (glucoseLevel < 70) {
-        alert = await createAlert({
-            patientId,
-            alertType: 'low_glucose',
-            severity: glucoseLevel < 50 ? 'critical' : 'high',
-            title: `Nivel de glucosa bajo: ${glucoseLevel} mg/dL`,
-            message: glucoseLevel < 50
-            ? 'CRÍTICO: Glucosa muy baja. Consuma alimento azucarado ahora.'
-            : 'Glucosa baja. Coma algo dulce.',
-            healthData: glucoseData
-        });
-    }
-    return alert;
-};
-
-/**
- * Generar alertas basadas en presión arterial
- */
-export const generateBloodPressureAlert = async (patientId, systolic, diastolic, bpData) => {
-    let alert = null;
-
-    if (systolic > 140 || diastolic > 90) {
-        const severity = (systolic > 180 || diastolic > 120) ? 'critical' : 'high';
-    
-        alert = await createAlert({
-            patientId,
-            alertType: 'high_blood_pressure',
-            severity,
-            title: `Presión arterial elevada: ${systolic}/${diastolic}`,
-            message: severity === 'critical'
-            ? `CRÍTICO: ${systolic}/${diastolic} mmHg. Busque atención médica de emergencia.`
-            : `Presión elevada: ${systolic}/${diastolic} mmHg. Monitoree.`,
-            healthData: bpData
-        });
-    }
-    return alert;
-};
-
-/**
- * Generar alertas por emociones negativas
- */
-export const generateEmotionAlert = async (patientId, emotion, emotionScore, emotionData) => {
-    // Emociones negativas y su severidad
-    const negativeEmotions = {
-        'sad': { severity: 'medium', message: 'Emoción detectada: tristeza' },
-        'angry': { severity: 'high', message: 'Emoción detectada: ira' },
-        'anxious': { severity: 'high', message: 'Emoción detectada: ansiedad' },
-        'depressed': { severity: 'critical', message: 'Emoción detectada: depresión' },
-        'stressed': { severity: 'medium', message: 'Emoción detectada: estrés' }
-    };
-
-    if (negativeEmotions[emotion]) {
-        const { severity, message } = negativeEmotions[emotion];
-
-        const alert = await createAlert({
-        patientId,
-        alertType: 'negative_emotion',
-        severity,
-        title: `Emoción negativa detectada: ${emotion} (${(emotionScore * 100).toFixed(0)}%)`,
-        message: `${message}. Monitoree el bienestar emocional del paciente.`,
-        healthData: emotionData
-        });
-        return alert;
-    }
-    return null;
-};
-
-/**
- * Obtener alertas de un paciente
- */
-export const getPatientAlerts = async (patientId, filters = {}) => {
-    try {
-        // const alerts = await Alert.find({ patientId })
-        //   .sort({ createdAt: -1 })
-        //   .limit(filters.limit || 50);
-
-    return [
-        {
-            id: 'alert_1',
-            patientId,
-            alertType: 'high_glucose',
-            severity: 'high',
-            title: 'Nivel de glucosa elevado: 220 mg/dL',
-            message: 'Nivel de glucosa elevado. Monitoree regularmente.',
-            isViewed: false,
-            isResolved: false,
-            createdAt: new Date()
-        },
-        {
-            id: 'alert_2',
-            patientId,
-            alertType: 'high_blood_pressure',
-            severity: 'high',
-            title: 'Presión arterial elevada: 145/92',
-            message: 'Presión elevada: 145/92 mmHg. Monitoree.',
-            isViewed: true,
-            isResolved: true,
-            createdAt: new Date()
+        switch (emotion) {
+            case 'sad':
+            case 'fear':
+                severity = 'ALTA';
+                message = `Emoción negativa detectada: ${emotion}. Nivel de confianza: ${(confidence * 100).toFixed(1)}%`;
+                break;
+            case 'angry':
+            case 'disgust':
+                severity = 'MEDIA';
+                message = `Emoción negativa detectada: ${emotion}. Nivel de confianza: ${(confidence * 100).toFixed(1)}%`;
+                break;
+            default:
+                severity = 'BAJA';
+                message = `Emoción detectada: ${emotion}. Nivel de confianza: ${(confidence * 100).toFixed(1)}%`;
         }
-    ];
+
+        const alert = new Alert({
+            elderly: elderlyId,
+            type: 'EMOCION_NEGATIVA',
+            severity,
+            message,
+            isActive: true
+        });
+
+        await alert.save();
+
+        // Buscar cuidador primario y enviar email
+        try {
+            const primaryCaregiver = await CaregiverLink.findOne({
+                elderly: elderlyId,
+                isPrimary: true,
+                isActive: true
+            }).select('caregiver');
+
+            if (primaryCaregiver?.caregiver) {
+                // Importar findUserById que maneja Sequelize correctamente
+                const { findUserById } = await import('../../helpers/user-db.js');
+                const caregiver = await findUserById(primaryCaregiver.caregiver);
+                
+                if (caregiver?.Email) {
+                    await sendAlertEmail(
+                        caregiver.Email,
+                        caregiver.Name,
+                        'EMOCION_NEGATIVA',
+                        severity,
+                        message
+                    );
+                    console.log(` Alerta emocional enviada por email a ${caregiver.Email}`);
+                }
+            }
+        } catch (emailError) {
+            console.error(' Error al enviar alerta emocional por email:', emailError.message);
+        }
+
+        return {
+            alertId: alert._id,
+            alertType: alert.type,
+            severity: alert.severity
+        };
     } catch (error) {
-        throw new Error(`Error al obtener alertas: ${error.message}`);
+        console.error('Error generating emotion alert:', error);
+        return null;
     }
 };
 
-/**
- * Obtener alertas activas (no resueltas) de un paciente
- */
-export const getActiveAlerts = async (patientId) => {
+export const generateVitalAlert = async (elderlyId, type, value, details) => {
     try {
-        // const alerts = await Alert.find({ 
-        //   patientId, 
-        //   isResolved: false 
-        // }).sort({ createdAt: -1 });
+        let severity;
+        let message;
 
-        return [];
+        switch (type) {
+            case 'PRESION_ALTA':
+                severity = value > 180 ? 'CRITICA' : value > 160 ? 'ALTA' : 'MEDIA';
+                message = `Presión arterial alta: ${value} mmHg. ${details || ''}`;
+                break;
+            case 'PRESION_BAJA':
+                severity = value < 60 ? 'ALTA' : value < 80 ? 'MEDIA' : 'BAJA';
+                message = `Presión arterial baja: ${value} mmHg. ${details || ''}`;
+                break;
+            case 'GLUCOSA_ALTA':
+                severity = value > 300 ? 'CRITICA' : value > 250 ? 'ALTA' : 'MEDIA';
+                message = `Glucosa elevada: ${value} mg/dL. ${details || ''}`;
+                break;
+            case 'GLUCOSA_BAJA':
+                severity = value < 50 ? 'CRITICA' : value < 70 ? 'ALTA' : 'MEDIA';
+                message = `Glucosa baja: ${value} mg/dL. ${details || ''}`;
+                break;
+            default:
+                severity = 'BAJA';
+                message = `Alerta de ${type}: ${value}`;
+        }
+
+        const alert = new Alert({
+            elderly: elderlyId,
+            type,
+            severity,
+            message,
+            isActive: true
+        });
+
+        await alert.save();
+
+        // Buscar cuidador primario y enviar email
+        try {
+            const primaryCaregiver = await CaregiverLink.findOne({
+                elderly: elderlyId,
+                isPrimary: true,
+                isActive: true
+            }).select('caregiver');
+
+            if (primaryCaregiver?.caregiver) {
+                // Importar findUserById que maneja Sequelize correctamente
+                const { findUserById } = await import('../../helpers/user-db.js');
+                const caregiver = await findUserById(primaryCaregiver.caregiver);
+                
+                if (caregiver?.Email) {
+                    const { sendAlertEmail } = await import('../../helpers/email-service.js');
+                    await sendAlertEmail(
+                        caregiver.Email,
+                        caregiver.Name,
+                        type,
+                        severity,
+                        message
+                    );
+                    console.log(` Alerta vital enviada por email a ${caregiver.Email}`);
+                }
+            } else {
+                console.warn(` No hay cuidador primario para enviar alerta de ${type}`);
+            }
+        } catch (emailError) {
+            console.error(' Error al enviar alerta vital por email:', emailError.message);
+            // No lanzamos error para no fallar la creación de la alerta
+        }
+
+        return {
+            alertId: alert._id,
+            alertType: alert.type,
+            severity: alert.severity
+        };
     } catch (error) {
-        throw new Error(`Error al obtener alertas activas: ${error.message}`);
-    }
-};
-
-/**
- * Marcar alerta como vista
- */
-export const markAlertAsViewed = async (alertId, patientId) => {
-    try {
-        // const alert = await Alert.findByIdAndUpdate(
-        //   alertId,
-        //   { isViewed: true, viewedAt: new Date() },
-        //   { new: true }
-        // );
-
-        return { id: alertId, isViewed: true, viewedAt: new Date() };
-    } catch (error) {
-        throw new Error(`Error al marcar como visto: ${error.message}`);
-    }
-};
-
-/**
- * Resolver alerta
- */
-export const resolveAlert = async (alertId, patientId) => {
-    try {
-        // const alert = await Alert.findByIdAndUpdate(
-        //   alertId,
-        //   { isResolved: true, resolvedAt: new Date() },
-        //   { new: true }
-        // );
-
-        return { id: alertId, isResolved: true, resolvedAt: new Date() };
-    } catch (error) {
-        throw new Error(`Error al resolver alerta: ${error.message}`);
+        console.error('Error generating vital alert:', error);
+        return null;
     }
 };
