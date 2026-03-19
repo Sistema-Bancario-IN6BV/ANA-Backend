@@ -44,9 +44,9 @@ export const createAlert = async (req, res) => {
                     severity,
                     message
                 );
-                console.log(`✅ Alerta enviada por email a ${primaryCaregiver.caregiver.email}`);
+                console.log(`Alerta enviada por email a ${primaryCaregiver.caregiver.email}`);
             } catch (emailError) {
-                console.error('⚠️ Error al enviar alerta por email:', emailError.message);
+                console.error('Error al enviar alerta por email:', emailError.message);
                 // No lanzamos error para no fallar la creación de la alerta
             }
         }
