@@ -5,10 +5,7 @@ import { Role, UserRole } from '../src/auth/role.model.js';
 import { hashPassword } from '../utils/password-utils.js';
 import { ADMIN_ROLE } from '../helpers/role-constants.js';
 
-/**
- * Seed del usuario administrador
- * Se ejecuta automáticamente al iniciar la app
- */
+
 export const seedAdminUser = async () => {
   try {
     // Verificar si el admin ya existe
@@ -17,7 +14,7 @@ export const seedAdminUser = async () => {
     });
 
     if (adminExists) {
-      console.log('ℹ️  Admin user already exists');
+      console.log('Admin user already exists');
       return;
     }
 
@@ -64,10 +61,10 @@ export const seedAdminUser = async () => {
       });
     }
 
-    console.log('✓ Admin user created');
-    console.log('  Username: admin');
-    console.log('  Email: admin@anaapp.com');
-    console.log('  Password: AdminANA789@');
+    console.log('Admin user created');
+    console.log('Username: admin');
+    console.log('Email: admin@anaapp.com');
+    console.log('Password: AdminANA789@');
   } catch (error) {
     console.error('Error creating admin user:', error.message);
   }

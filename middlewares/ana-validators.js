@@ -1,6 +1,6 @@
 'use strict';
 
-import { body, param, validationResult } from 'express-validator';
+import { body, param, query, validationResult } from 'express-validator';
 
 /**
  * Validar entrada de texto para análisis
@@ -8,10 +8,25 @@ import { body, param, validationResult } from 'express-validator';
 export const validateTextInput = [
   body('text')
     .trim()
+    .escape()
     .notEmpty()
     .withMessage('El texto es requerido')
     .isLength({ min: 3, max: 5000 })
     .withMessage('El texto debe tener entre 3 y 5000 caracteres'),
+];
+
+/**
+ * Validar parámetros de paginación
+ */
+export const validatePagination = [
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('limit debe estar entre 1 y 100'),
+  query('skip')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('skip debe ser >= 0'),
 ];
 
 /**

@@ -8,7 +8,7 @@ import {
     deleteAnalysis,
     getEmotionsStats
 } from './ana.controller.js';
-import { validateTextInput, validateAnalysisId, handleValidationErrors } from '../../middlewares/ana-validators.js';
+import { validateTextInput, validateAnalysisId, validatePagination, handleValidationErrors } from '../../middlewares/ana-validators.js';
 import { validateJWT } from '../../middlewares/validate-JWT.js';
 
 const router = Router();
@@ -24,6 +24,8 @@ router.post(
 router.get(
     '/history',
     validateJWT,
+    validatePagination,
+    handleValidationErrors,
     getAnalysisHistory
 );
 

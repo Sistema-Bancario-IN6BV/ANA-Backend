@@ -3,73 +3,162 @@
 import axios from 'axios';
 import Analysis from './ana.model.js';
 
-// URL de la API de ANA-IA-Engine (puede configurarse desde variables de entorno)
 const ANA_API_URL = process.env.ANA_API_URL || 'http://localhost:8000';
 const ANALYZE_ENDPOINT = `${ANA_API_URL}/analyze`;
-const CHAT_ENDPOINT = `${ANA_API_URL}/chat`;
 const HEALTH_ENDPOINT = `${ANA_API_URL}/health`;
+
 
 export const analyzeText = async (text, elderlyId) => {
     try {
-        // Verificar que el servicio ANA esté disponible
         await checkANAHealth();
 
-        // Llamar al servicio de análisis de ANA-IA-Engine
-        const response = await axios.post(ANALYZE_ENDPOINT, { text }, {
-            timeout: 30000, // 30 segundos timeout
-            headers: {
-                'Content-Type': 'application/json'
+        const { data: analysisData } = await axios.post(
+            ANALYZE_ENDPOINT,
+            { text },
+            {
+                timeout: 60000,
+                headers: { 'Content-Type': 'application/json' }
             }
-        });
+        );
 
-        const analysisData = response.data;
+        const rawAnalysis = analysisData.analysis || analysisData;
+        
+        const emotionalState = rawAnalysis.emotional_state || 
+                               mapEmotionToSpanish(
+                                   rawAnalysis.emotion_dict ||
+                                   rawAnalysis.emotion_model ||
+                                   rawAnalysis.emotion ||
+                                   'neutral'
+                               );
 
-        // Crear documento de análisis
+        const riskLevel = normalizeRiskToSpanish(
+            rawAnalysis.risk_level || 'bajo'
+        );
+
         const analysis = new Analysis({
             elderly: elderlyId,
             text,
             analysis: {
-                sentiment_label: analysisData.sentiment_label || 'neutral',
-                emotion_model: analysisData.emotion_model || null,
-                emotion_score: analysisData.emotion_score || 0,
-                emotional_state: mapEmotionToSpanish(analysisData.emotional_state || 'neutral'),
-                semantic_state: analysisData.semantic_state || null,
-                semantic_confidence: analysisData.semantic_confidence || 0,
-                context: analysisData.context || null,
-                risk_level: analysisData.risk_level || 'bajo',
-                keywords: analysisData.keywords || [],
-                trend: analysisData.trend || 'stable',
-                message: analysisData.message || null,
-                confidence: analysisData.emotion_score || 0
+                sentiment_label: rawAnalysis.sentiment_label || rawAnalysis.sentiment || 'neutral',
+                emotion_model: rawAnalysis.emotion_model || rawAnalysis.emotion || null,
+                emotion_score: rawAnalysis.emotion_score || 0,
+                emotional_state: emotionalState,
+                semantic_state: rawAnalysis.semantic_state || null,
+                semantic_confidence: rawAnalysis.semantic_confidence || 0,
+                context: rawAnalysis.context || null,
+                risk_level: riskLevel,
+                keywords: rawAnalysis.keywords || [],
+                trend: rawAnalysis.trend || 'stable',
+                message: rawAnalysis.message || analysisData.response || null,
+                confidence: rawAnalysis.emotion_score || rawAnalysis.confidence || 0
             },
-            response: analysisData.response || null,
+            response: rawAnalysis.message || analysisData.response || null,
             alertGenerated: false,
             isActive: true
         });
 
-        // Guardar análisis en la base de datos
         const savedAnalysis = await analysis.save();
 
         return {
             success: true,
             analysisId: savedAnalysis._id,
             analysis: {
+                message: savedAnalysis.analysis.message || 'Mensaje no disponible',
                 emotion: mapEmotionToEnglish(savedAnalysis.analysis.emotional_state),
                 confidence: savedAnalysis.analysis.confidence,
                 sentiment: savedAnalysis.analysis.sentiment_label,
                 riskLevel: savedAnalysis.analysis.risk_level,
-                message: savedAnalysis.analysis.message,
                 keywords: savedAnalysis.analysis.keywords,
                 trend: savedAnalysis.analysis.trend
             },
             timestamp: savedAnalysis.createdAt
         };
+
     } catch (error) {
-        console.error('Error en analyzeText:', error.message);
+        console.error('❌ Error en analyzeText:', error.message);
+        console.error('Stack:', error.stack);
         throw new Error(`Error al analizar texto: ${error.message}`);
     }
 };
 
+export const checkANAHealth = async () => {
+    try {
+        const response = await axios.get(HEALTH_ENDPOINT, {
+            timeout: 5000
+        });
+
+        if (response.status !== 200) {
+            throw new Error('Servicio ANA no disponible');
+        }
+
+        return {
+            success: true,
+            status: response.data
+        };
+    } catch (error) {
+        throw new Error(`Servicio ANA no disponible: ${error.message}`);
+    }
+};
+
+function mapEmotionToSpanish(emotion) {
+    const emotionMap = {
+        joy: 'alegria',
+        happiness: 'alegria',
+        happy: 'alegria',
+        sadness: 'tristeza',
+        sad: 'tristeza',
+        fear: 'miedo',
+        anger: 'ira',
+        angry: 'ira',
+        disgust: 'disgust',
+        surprise: 'sorpresa',
+        stressed: 'estresado',
+        stress: 'estresado',
+        depressed: 'deprimido',
+        depression: 'deprimido',
+        anxious: 'ansioso',
+        anxiety: 'ansioso',
+        neutral: 'neutral'
+    };
+
+    return emotionMap[String(emotion).toLowerCase()] || 'neutral';
+}
+
+function mapEmotionToEnglish(emotion) {
+    const emotionMap = {
+        alegria: 'joy',
+        tristeza: 'sadness',
+        miedo: 'fear',
+        ira: 'anger',
+        disgust: 'disgust',
+        sorpresa: 'surprise',
+        estresado: 'stressed',
+        deprimido: 'depressed',
+        ansioso: 'anxious',
+        neutral: 'neutral'
+    };
+
+    return emotionMap[String(emotion).toLowerCase()] || 'neutral';
+}
+
+
+function normalizeRiskToSpanish(risk) {
+    if (!risk) return 'bajo';
+    
+    // Extraer solo la primera parte si viene como "bajo_tristeza_leve"
+    const riskLevel = String(risk).toLowerCase().split('_')[0];
+    
+    const map = {
+        low: 'bajo',
+        medium: 'medio',
+        high: 'alto',
+        bajo: 'bajo',
+        medio: 'medio',
+        alto: 'alto'
+    };
+
+    return map[riskLevel] || 'bajo';
+}
 
 export const getHistoryFromAPI = async (elderlyId, limit = 20, skip = 0) => {
     try {
@@ -105,11 +194,9 @@ export const getHistoryFromAPI = async (elderlyId, limit = 20, skip = 0) => {
             }
         };
     } catch (error) {
-        console.error('Error en getHistoryFromAPI:', error.message);
         throw new Error(`Error al obtener historial: ${error.message}`);
     }
 };
-
 
 export const getAnalysisByIdFromAPI = async (analysisId) => {
     try {
@@ -124,11 +211,9 @@ export const getAnalysisByIdFromAPI = async (analysisId) => {
             data: analysis
         };
     } catch (error) {
-        console.error('Error en getAnalysisByIdFromAPI:', error.message);
         throw new Error(`Error al obtener análisis: ${error.message}`);
     }
 };
-
 
 export const deleteAnalysisFromAPI = async (analysisId) => {
     try {
@@ -147,10 +232,10 @@ export const deleteAnalysisFromAPI = async (analysisId) => {
             message: 'Análisis eliminado correctamente'
         };
     } catch (error) {
-        console.error('Error en deleteAnalysisFromAPI:', error.message);
         throw new Error(`Error al eliminar análisis: ${error.message}`);
     }
 };
+
 
 export const getEmotionStats = async (elderlyId) => {
     try {
@@ -177,64 +262,6 @@ export const getEmotionStats = async (elderlyId) => {
             total
         };
     } catch (error) {
-        console.error('Error en getEmotionStats:', error.message);
         throw new Error(`Error al obtener estadísticas: ${error.message}`);
     }
 };
-
-export const checkANAHealth = async () => {
-    try {
-        const response = await axios.get(HEALTH_ENDPOINT, {
-            timeout: 5000 // 5 segundos timeout
-        });
-
-        if (response.status !== 200) {
-            throw new Error('Servicio ANA no disponible');
-        }
-
-        return {
-            success: true,
-            status: response.data
-        };
-    } catch (error) {
-        console.error('Error checking ANA health:', error.message);
-        throw new Error(`Servicio ANA no disponible: ${error.message}`);
-    }
-};
-
-function mapEmotionToSpanish(emotion) {
-    const emotionMap = {
-        'joy': 'alegria',
-        'sadness': 'tristeza',
-        'fear': 'miedo',
-        'anger': 'ira',
-        'disgust': 'disgust',
-        'surprise': 'sorpresa',
-        'stressed': 'estresado',
-        'depressed': 'deprimido',
-        'anxious': 'ansioso',
-        'neutral': 'neutral',
-        'sad': 'tristeza',
-        'angry': 'ira'
-    };
-
-    return emotionMap[emotion?.toLowerCase()] || 'neutral';
-}
-
-
-function mapEmotionToEnglish(emotion) {
-    const emotionMap = {
-        'alegria': 'joy',
-        'tristeza': 'sadness',
-        'miedo': 'fear',
-        'ira': 'anger',
-        'disgust': 'disgust',
-        'sorpresa': 'surprise',
-        'estresado': 'stressed',
-        'deprimido': 'depressed',
-        'ansioso': 'anxious',
-        'neutral': 'neutral'
-    };
-
-    return emotionMap[emotion?.toLowerCase()] || 'neutral';
-}
