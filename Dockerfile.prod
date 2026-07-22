@@ -1,0 +1,40 @@
+# --- Fase 8: imagen de producción de ANA-Backend (multi-stage) ---
+
+# ---- Etapa 1: "deps" — compila dependencias nativas en Alpine (musl) ----
+# Se descarta por completo al final; solo se usa para producir node_modules.
+FROM node:22-alpine AS deps
+
+WORKDIR /usr/src/app
+
+# python3/make/g++: toolchain de compilación que bcrypt/argon2 necesitan en
+# Alpine (musl no tiene wheels/binarios prebuilt como en node:22-slim).
+# Esta capa NUNCA llega a la imagen final.
+RUN apk add --no-cache python3 make g++
+
+RUN corepack enable && corepack prepare pnpm@10.30.0 --activate
+
+COPY package.json pnpm-lock.yaml ./
+
+# --prod: no instala nodemon/vitest — no tienen ningún uso en producción.
+RUN pnpm install --frozen-lockfile --prod
+
+# ---- Etapa 2: "runtime" — imagen final, ligera, sin toolchain de build ----
+FROM node:22-alpine AS runtime
+
+WORKDIR /usr/src/app
+
+ENV NODE_ENV=production
+
+# Copiamos SOLO el resultado ya compilado de la etapa "deps", no la etapa
+# entera — python3/make/g++ jamás llegan aquí.
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+COPY . .
+
+EXPOSE 3000
+
+# La imagen node:22-alpine ya trae un usuario "node" (uid 1000) sin
+# privilegios, creado por el propio mantenedor de la imagen oficial — no root
+# dentro del contenedor si el proceso se ve comprometido.
+USER node
+
+CMD ["node", "index.js"]
