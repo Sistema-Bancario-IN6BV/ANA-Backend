@@ -34,7 +34,7 @@ const analysisSchema = mongoose.Schema(
             },
             emotional_state: {
                 type: String,
-                enum: ['alegria', 'tristeza', 'miedo', 'ira', 'disgust', 'estresado', 'deprimido', 'ansioso', 'neutral'],
+                enum: ['alegria', 'tristeza', 'miedo', 'ira', 'disgust', 'estresado', 'deprimido', 'ansioso', 'neutral', 'soledad', 'confuso', 'euforia'],
                 default: 'neutral'
             },
             semantic_state: {
@@ -53,7 +53,7 @@ const analysisSchema = mongoose.Schema(
             },
             risk_level: {
                 type: String,
-                enum: ['bajo', 'medio', 'alto'],
+                enum: ['bajo', 'medio', 'alto', 'critico'],
                 default: 'bajo'
             },
             keywords: {

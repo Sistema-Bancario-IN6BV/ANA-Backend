@@ -14,7 +14,7 @@ const alertSchema = mongoose.Schema(
             type: String,
             required: [true, 'El tipo de alerta es requerido'],
             enum: {
-                values: ['EMOCION_NEGATIVA', 'PRESION_ALTA', 'PRESION_BAJA', 'GLUCOSA_ALTA', 'GLUCOSA_BAJA', 'INACTIVIDAD'],
+                values: ['EMOCION_NEGATIVA', 'PRESION_ALTA', 'PRESION_BAJA', 'GLUCOSA_ALTA', 'GLUCOSA_BAJA', 'INACTIVIDAD', 'RIESGO_CAIDA', 'MEDICAMENTO_OMITIDO'],
                 message: 'Tipo de alerta no válido'
             }
         },

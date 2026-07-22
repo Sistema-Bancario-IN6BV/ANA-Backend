@@ -64,6 +64,9 @@ export const config = {
     // Email endpoints rate limiting (more restrictive for security)
     emailWindowMs: 15 * 60 * 1000, // 15 minutes
     emailMaxRequests: 3,
+    // Voice endpoints rate limiting (audio forwarding to IA-Engine is expensive)
+    voiceWindowMs: 5 * 60 * 1000, // 5 minutes
+    voiceMaxRequests: 10,
   },
 
   // Security (aligned with .NET Security configuration)

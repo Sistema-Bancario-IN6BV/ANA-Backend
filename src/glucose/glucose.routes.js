@@ -7,13 +7,14 @@ import {
     validateStatusChange,
     validateGetById
 } from '../../middlewares/glucose-validators.js';
+import { validateJWT } from '../../middlewares/validate-JWT.js';
 
 const router = Router();
 
-router.post('/create', validateCreate, createRecord);
-router.get('/get', getRecords);
-router.get('/:id', validateGetById, getRecordById);
-router.put('/:id/activate', validateStatusChange, changeStatus);
-router.put('/:id/deactivate', validateStatusChange, changeStatus);
+router.post('/create', validateJWT, validateCreate, createRecord);
+router.get('/get', validateJWT, getRecords);
+router.get('/:id', validateJWT, validateGetById, getRecordById);
+router.put('/:id/activate', validateJWT, validateStatusChange, changeStatus);
+router.put('/:id/deactivate', validateJWT, validateStatusChange, changeStatus);
 
 export default router;

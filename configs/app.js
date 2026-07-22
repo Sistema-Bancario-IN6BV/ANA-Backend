@@ -17,7 +17,10 @@ import userRoutes from '../src/users/user.routes.js';
 import caregiversRoutes from '../src/caregivers/caregivers.routes.js';
 import glucoseRoutes from '../src/glucose/glucose.routes.js';
 import bloodPressureRoutes from '../src/bloodPressure/bloodPressure.routes.js';
+import medicationsRoutes from '../src/medications/medications.routes.js';
 import alertsRoutes from '../src/alerts/alerts.routes.js';
+import pushTokenRoutes from '../src/notifications/pushToken.routes.js';
+import { startMedicationReminderJob } from '../jobs/medicationReminderJob.js';
 
 const BASE_PATH = '/api/v1';
 
@@ -36,7 +39,9 @@ const routes = (app) => {
     app.use(`${BASE_PATH}/caregivers`, caregiversRoutes);
     app.use(`${BASE_PATH}/glucose`, glucoseRoutes);
     app.use(`${BASE_PATH}/blood-pressure`, bloodPressureRoutes);
+    app.use(`${BASE_PATH}/medications`, medicationsRoutes);
     app.use(`${BASE_PATH}/alerts`, alertsRoutes);
+    app.use(`${BASE_PATH}/push-tokens`, pushTokenRoutes);
     app.use(`${BASE_PATH}/ana`, anaRoutes);
 
     app.get(`${BASE_PATH}/health`, (req, res) => {
@@ -77,6 +82,9 @@ export const initServer = async () => {
         routes(app);
 
         app.use(errorHandler);
+
+        // Revisa periódicamente dosis de medicamentos omitidas y alerta al cuidador
+        startMedicationReminderJob();
 
         app.listen(PORT, () => {
             console.log(`Senior Health Monitoring server running on port ${PORT}`);

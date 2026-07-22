@@ -27,6 +27,31 @@ export const validatePagination = [
     .optional()
     .isInt({ min: 0 })
     .withMessage('skip debe ser >= 0'),
+  query('elderlyId')
+    .optional()
+    .isUUID()
+    .withMessage('elderlyId debe ser un UUID válido'),
+];
+
+/**
+ * Validar query opcional elderlyId (para endpoints de cuidador sin paginación)
+ */
+export const validateElderlyIdQuery = [
+  query('elderlyId')
+    .optional()
+    .isUUID()
+    .withMessage('elderlyId debe ser un UUID válido'),
+];
+
+/**
+ * Validar query de historial de escaneos (paginación + tipo opcional)
+ */
+export const validateScanQuery = [
+  ...validatePagination,
+  query('type')
+    .optional()
+    .isIn(['vision', 'document'])
+    .withMessage('type debe ser "vision" o "document"'),
 ];
 
 /**

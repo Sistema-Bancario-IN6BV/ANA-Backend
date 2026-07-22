@@ -66,3 +66,24 @@ export const emailRateLimit = rateLimit({
         });
     },
 });
+
+// Rate limiter para endpoints de voz (audio reenviado al IA-Engine es costoso de procesar)
+export const voiceRateLimit = rateLimit({
+    windowMs: config.rateLimit.voiceWindowMs,
+    max: config.rateLimit.voiceMaxRequests,
+    message: {
+        success: false,
+        message: 'Demasiadas solicitudes de audio, intenta de nuevo más tarde.',
+        retryAfter: Math.ceil(config.rateLimit.voiceWindowMs / 1000),
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+        console.log(`Voice rate limit exceeded for user: ${req.user?.id || req.ip}`);
+        res.status(429).json({
+        success: false,
+        message: 'Demasiadas solicitudes de audio, intenta de nuevo más tarde.',
+        retryAfter: Math.ceil(config.rateLimit.voiceWindowMs / 1000),
+        });
+    },
+});
