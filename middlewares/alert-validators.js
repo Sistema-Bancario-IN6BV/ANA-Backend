@@ -9,7 +9,7 @@ export const validateCreate = [
     validateJWT,
     body('type')
         .notEmpty().withMessage('El tipo de alerta es requerido')
-        .isIn(['EMOCION_NEGATIVA', 'PRESION_ALTA', 'PRESION_BAJA', 'GLUCOSA_ALTA', 'GLUCOSA_BAJA', 'INACTIVIDAD'])
+        .isIn(['EMOCION_NEGATIVA', 'PRESION_ALTA', 'PRESION_BAJA', 'GLUCOSA_ALTA', 'GLUCOSA_BAJA', 'INACTIVIDAD', 'RIESGO_CAIDA', 'MEDICAMENTO_OMITIDO'])
         .withMessage('Tipo de alerta inválido'),
     body('severity')
         .notEmpty().withMessage('La severidad es requerida')

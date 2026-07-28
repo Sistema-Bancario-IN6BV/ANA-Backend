@@ -3,6 +3,22 @@
 import CaregiverLink from './caregivers.model.js';
 import { findUserById } from '../../helpers/user-db.js';
 
+// Enriquece uno o varios vínculos (que solo guardan IDs de Postgres en Mongo)
+// con el nombre del abuelo y del cuidador, para no mostrar IDs crudos en el UI.
+const nameOf = (user) => (user ? `${user.Name} ${user.Surname || ''}`.trim() : null);
+
+const attachNames = async (links) => {
+    const ids = [...new Set(links.flatMap((l) => [l.elderly, l.caregiver]))];
+    const users = await Promise.all(ids.map((id) => findUserById(id).catch(() => null)));
+    const nameById = new Map(ids.map((id, i) => [id, nameOf(users[i])]));
+
+    return links.map((l) => ({
+        ...l,
+        elderlyName: nameById.get(l.elderly) || null,
+        caregiverName: nameById.get(l.caregiver) || null,
+    }));
+};
+
 export const createLink = async (req, res) => {
     try {
         const { caregiver, relationship, isPrimary, notes } = req.body;
@@ -92,13 +108,14 @@ export const getLinks = async (req, res) => {
         const links = await CaregiverLink.find(filter)
             .limit(limit * 1)
             .skip((page - 1) * limit)
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         const total = await CaregiverLink.countDocuments(filter);
 
         res.status(200).json({
             success: true,
-            data: links,
+            data: await attachNames(links),
             pagination: {
                 currentPage: parseInt(page),
                 totalPages: Math.ceil(total / limit),
@@ -155,9 +172,11 @@ export const getLinkById = async (req, res) => {
             });
         }
 
+        const [enrichedLink] = await attachNames([link.toObject()]);
+
         return res.status(200).json({
             success: true,
-            data: link
+            data: enrichedLink
         });
     } catch (error) {
         res.status(500).json({

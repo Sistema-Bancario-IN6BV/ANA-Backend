@@ -12,11 +12,11 @@ import { validateJWT } from '../../middlewares/validate-JWT.js';
 
 const router = Router();
 
-router.post('/create', validateCreate, createAlert);
+router.post('/create', validateJWT, validateCreate, createAlert);
 router.get('/get', validateJWT, getAlerts);
-router.get('/:id', validateGetById, getAlertById);
-router.put('/:id/read', validateMarkAsRead, markAsRead);
-router.put('/:id/activate', validateStatusChange, changeStatus);
-router.put('/:id/deactivate', validateStatusChange, changeStatus);
+router.get('/:id', validateJWT, validateGetById, getAlertById);
+router.put('/:id/read', validateJWT, validateMarkAsRead, markAsRead);
+router.put('/:id/activate', validateJWT, validateStatusChange, changeStatus);
+router.put('/:id/deactivate', validateJWT, validateStatusChange, changeStatus);
 
 export default router;
