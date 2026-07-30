@@ -39,6 +39,12 @@ export const config = {
     uploadPath: process.env.UPLOAD_PATH,
   },
 
+  // ANA IA-Engine Configuration
+  ana: {
+    apiUrl: process.env.ANA_API_URL || 'http://localhost:8000',
+    requestTimeoutMs: parseInt(process.env.ANA_API_TIMEOUT_MS, 10) || 120000,
+  },
+
   // Cloudinary Configuration
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,

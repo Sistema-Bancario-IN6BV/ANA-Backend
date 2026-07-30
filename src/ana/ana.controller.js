@@ -14,8 +14,10 @@ import {
 import { generateEmotionAlert, generateCrisisAlert, generateFallRiskAlert } from '../alerts/alerts.service.js';
 import CaregiverLink from '../caregivers/caregivers.model.js';
 import { sendResponse } from '../../utils/responseHandler.js';
+import { config } from '../../configs/config.js';
 
-const ANA_API_URL = process.env.ANA_API_URL || 'http://localhost:8000';
+const ANA_API_URL = config.ana.apiUrl;
+const ANA_API_TIMEOUT = config.ana.requestTimeoutMs;
 
 // ──────────────────────────────────────────────
 // HELPER — resolver a qué abuelo puede acceder el solicitante
@@ -115,7 +117,7 @@ export const analyzeVoice = async (req, res, next) => {
                 ...form.getHeaders(),
                 'X-Elderly-Id': elderlyId,
             },
-            timeout: 60000,
+            timeout: ANA_API_TIMEOUT,
         });
 
         // Si no detectó wake word
@@ -167,7 +169,7 @@ export const analyzeVoiceSpeak = async (req, res, next) => {
                 ...form.getHeaders(),
                 'X-Elderly-Id': elderlyId,
             },
-            timeout:      60000,
+            timeout:      ANA_API_TIMEOUT,
             responseType: 'arraybuffer',  // recibir audio binario
         });
 
@@ -215,7 +217,7 @@ export const detectObjects = async (req, res, next) => {
 
         const { data } = await axios.post(`${ANA_API_URL}/api/v1/vision/detect`, form, {
             headers: form.getHeaders(),
-            timeout: 30000,
+            timeout: ANA_API_TIMEOUT,
         });
 
         await saveScan(elderlyId, 'vision', data).catch((err) =>
@@ -252,7 +254,7 @@ export const readDocument = async (req, res, next) => {
 
         const { data } = await axios.post(`${ANA_API_URL}/api/v1/documents/read`, form, {
             headers: form.getHeaders(),
-            timeout: 30000,
+            timeout: ANA_API_TIMEOUT,
         });
 
         await saveScan(elderlyId, 'document', data).catch((err) =>
@@ -295,7 +297,7 @@ export const getWeeklySummary = async (req, res, next) => {
 
         const { data } = await axios.get(
             `${ANA_API_URL}/summary/${targetId}`,
-            { timeout: 30000 }
+            { timeout: ANA_API_TIMEOUT }
         );
 
         return sendResponse(res, 200, true, 'Resumen semanal generado', data);
