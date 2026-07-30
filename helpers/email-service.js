@@ -69,7 +69,7 @@ export const sendVerificationEmail = async (email, name, verificationToken) => {
       <p>If you didn't create an account, please ignore this email.</p>
     `;
 
-    await sendEmail(email, 'Verify your email address', html);
+    return sendEmail(email, 'Verify your email address', html);
   } catch (error) {
     console.error('Error sending verification email:', error);
     throw error;
@@ -94,7 +94,7 @@ export const sendPasswordResetEmail = async (email, name, resetToken) => {
       <p>If you didn't request this, please ignore this email and your password will remain unchanged.</p>
     `;
 
-    await sendEmail(email, 'Reset your password', html);
+    return sendEmail(email, 'Reset your password', html);
   } catch (error) {
     console.error('Error sending password reset email:', error);
     throw error;
@@ -111,7 +111,7 @@ export const sendWelcomeEmail = async (email, name) => {
       <p>Thank you for joining us!</p>
     `;
 
-    await sendEmail(email, 'Welcome to AuthDotnet!', html);
+    return sendEmail(email, 'Welcome to AuthDotnet!', html);
   } catch (error) {
     console.error('Error sending welcome email:', error);
     throw error;
@@ -128,7 +128,7 @@ export const sendPasswordChangedEmail = async (email, name) => {
       <p>This is an automated email, please do not reply to this message.</p>
     `;
 
-    await sendEmail(email, 'Password Changed Successfully', html);
+    return sendEmail(email, 'Password Changed Successfully', html);
   } catch (error) {
     console.error('Error sending password changed email:', error);
     throw error;
@@ -202,7 +202,7 @@ export const sendAlertEmail = async (email, caregiverName, alertType, severity, 
       </div>
     `;
 
-    await sendEmail(email, `🚨 Alerta: ${typeLabel} - Severidad ${severityLabel}`, html);
+    return sendEmail(email, `🚨 Alerta: ${typeLabel} - Severidad ${severityLabel}`, html);
   } catch (error) {
     console.error('Error sending alert email:', error);
     throw error;
