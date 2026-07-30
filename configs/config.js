@@ -14,7 +14,14 @@ export const config = {
     audience: process.env.JWT_AUDIENCE,
   },
 
-  // SMTP Configuration (aligned with .NET SmtpSettings)
+  // Resend Configuration
+  resend: {
+    apiKey: process.env.RESEND_API_KEY,
+    fromEmail: process.env.EMAIL_FROM,
+    fromName: process.env.EMAIL_FROM_NAME,
+  },
+
+  // SMTP Configuration (kept for compatibility with older deployments)
   smtp: {
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT, 10) || 587,
