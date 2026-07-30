@@ -4,8 +4,10 @@ import axios from 'axios';
 import Analysis from './ana.model.js';
 import Scan from './scan.model.js';
 import { findUserById } from '../../helpers/user-db.js';
+import { config } from '../../configs/config.js';
 
-const ANA_API_URL      = process.env.ANA_API_URL || 'http://localhost:8000';
+const ANA_API_URL      = config.ana.apiUrl;
+const ANA_API_TIMEOUT  = config.ana.requestTimeoutMs;
 const CHAT_ENDPOINT    = `${ANA_API_URL}/chat`;
 const HEALTH_ENDPOINT  = `${ANA_API_URL}/health`;
 
@@ -69,7 +71,7 @@ export const analyzeText = async (text, elderlyId) => {
                 hobbies:     profile.hobbies     || [],
                 family:      profile.family      || [],
             },
-            { timeout: 60000, headers: { 'Content-Type': 'application/json' } }
+            { timeout: ANA_API_TIMEOUT, headers: { 'Content-Type': 'application/json' } }
         );
 
         console.log('✅ Respuesta de ANA recibida:', JSON.stringify(data, null, 2));
